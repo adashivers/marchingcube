@@ -87,7 +87,7 @@ public class CubeGridTest1 : MonoBehaviour
                 {
                     int halfGridSize = gridSize / 2;
                     Vector3 pos = new Vector3(i - halfGridSize, j - halfGridSize, k - halfGridSize);
-                    cubes[i, j, k] = new Cube(pos, transform.position, transform.rotation, cellSize);
+                    cubes[i, j, k] = new Cube(pos);
                     cubes[i, j, k].setPolyValues(isInSurface);
                     if (!isEmpty(cubes[i, j, k]))
                         filledCubes.Add(cubes[i, j, k]);

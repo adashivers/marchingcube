@@ -11,7 +11,7 @@ public class Cube
     public Vector3[] vertexPositions;
 
     // maps poly indices to the indices of their vertices on the cube
-    static int[] POLY_TO_VERTEX = { 
+    public static int[] POLY_TO_VERTEX = { 
         5, 4, 1, 7,
         6, 5, 1, 7,
         4, 0, 1, 7,
@@ -20,16 +20,16 @@ public class Cube
         3, 2, 1, 7 // to consider later: the last two indices of each polygon is redundant
     };
 
-    public Cube(Vector3 _pos, Vector3 gridOrigin, Quaternion gridRot, float gridCellSize)
+    public Cube(Vector3 _pos)
     {
         pos = _pos;
-        vertexPositions = new Vector3[8];
-        setVertexPos(gridOrigin, gridRot, gridCellSize);
+        vertexPositions = null;
+        
         polyhedra = 0;
     }
 
     // set vertex position table from grid origin and cell size
-    private void setVertexPos(Vector3 origin, Quaternion rot, float cellSize)
+    public void setVertexPos(Vector3 origin, Quaternion rot, float cellSize)
     {
         // goes bottom to top, clockwise starting from the upper left looking down from above:
         /* 0->--1   4->--5   
@@ -37,7 +37,7 @@ public class Cube
          * ^ wn |   ^    |   
          * 3--<-2   7--<-6   
          * */
-
+        vertexPositions = new Vector3[8];
         Vector3 centerInWorld = origin + rot * (pos * cellSize);
         float halfCellSize = cellSize * 0.5f;
         Vector3 xAxis = rot * new Vector3(halfCellSize, 0, 0);
@@ -57,12 +57,22 @@ public class Cube
 
     public void setPolyValues(Func<Vector3,bool> valueFunction)
     {
-        for (int polyVertI = 0; polyVertI < 24; polyVertI++)
+        if (vertexPositions != null)
         {
-            Vector3 vertPos = vertexPositions[POLY_TO_VERTEX[polyVertI]];
-            if (valueFunction(vertPos))
-                polyhedra |= 1 << polyVertI;
-        }
+            for (int polyVertI = 0; polyVertI < 24; polyVertI++)
+            {
+                Vector3 vertPos = vertexPositions[POLY_TO_VERTEX[polyVertI]];
+                if (valueFunction(vertPos))
+                    polyhedra |= 1 << polyVertI;
+            }
+        } else
+            Debug.LogError("setPolyValues called before vertex positions have been set!");
+        
+    }
+
+    public void setPolyDirectly(int polyValue)
+    {
+        polyhedra = polyValue;
     }
 
 

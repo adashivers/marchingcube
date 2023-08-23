@@ -1,0 +1,75 @@
+#pragma kernel CSMain
+
+
+RWStructuredBuffer<int> _PolyState;
+RWStructuredBuffer<int> POLY_TO_VERTEX;
+
+int _GridSize;
+float4x4 _Rot;
+float3 _GridOrigin;
+float _CellSize;
+
+int valueFunction(float3 pos) {
+    return pos.y < sin(pos.x) * 5; // test
+}
+
+// workgroup id is (cube x, cube y, cube z)
+
+// one thread per cube
+// 6 polyhedra, 4 vertex per
+[numthreads(6,4,1)]
+void CSMain(
+    uint3 threadid : SV_GroupThreadID, // coordinate of vertex within cube
+    uint3 groupid : SV_GroupID // coordinate of cube
+)
+{
+    int vertexIndexInCube = threadid.x * 4 + threadid.y;
+    int halfGridSize = int(float(_GridSize) / 2.0);
+    int3 cubeGridPos = int3(groupid) - halfGridSize;
+
+    // get vertex position
+    float3 vertexPosition = float3(0, 0, 0);
+    int vertexi = POLY_TO_VERTEX[vertexIndexInCube];
+    float3 centerInWorld = _GridOrigin + mul(_Rot, float4(cubeGridPos * _CellSize, 1)).xyz;
+    float halfCellSize = _CellSize * 0.5;
+    float3 xAxis = mul(_Rot, float4(halfCellSize, 0, 0, 1)).xyz;
+    float3 yAxis = mul(_Rot, float4(0, halfCellSize, 0, 1)).xyz;
+    float3 zAxis = mul(_Rot, float4(0, 0, halfCellSize, 1)).xyz;
+
+
+    [flatten] switch (vertexi) {
+    case 0:
+        vertexPosition = centerInWorld - xAxis - yAxis - zAxis;
+        break;
+    case 1:
+        vertexPosition = centerInWorld - xAxis - yAxis + zAxis;
+        break;
+    case 2:
+        vertexPosition = centerInWorld + xAxis - yAxis + zAxis;
+        break;
+    case 3:
+        vertexPosition = centerInWorld + xAxis - yAxis - zAxis;
+        break;
+    case 4:
+        vertexPosition = centerInWorld - xAxis + yAxis - zAxis;
+        break;
+    case 5:
+        vertexPosition = centerInWorld - xAxis + yAxis + zAxis;
+        break;
+    case 6:
+        vertexPosition = centerInWorld + xAxis + yAxis + zAxis;
+        break;
+    case 7:
+        vertexPosition = centerInWorld + xAxis + yAxis - zAxis;
+        break;
+
+    }
+
+
+    // set polyhedra state based on value function
+    int vertIndex = (groupid.x * _GridSize * _GridSize + groupid.y * _GridSize + groupid.z) * 6 * 4 + threadid.x * 4 + threadid.y;
+    int value = valueFunction(vertexPosition);
+    _PolyState[vertIndex] = value;
+
+}
+    
