@@ -549,15 +549,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7135771433626491014, guid: a94555d7f60de0d409d6350036430600, type: 3}
       propertyPath: useGPU
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7135771433626491014, guid: a94555d7f60de0d409d6350036430600, type: 3}
       propertyPath: cellSize
-      value: 5
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 7135771433626491014, guid: a94555d7f60de0d409d6350036430600, type: 3}
       propertyPath: gridSize
-      value: 50
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 7135771433626491014, guid: a94555d7f60de0d409d6350036430600, type: 3}
       propertyPath: noiseSize

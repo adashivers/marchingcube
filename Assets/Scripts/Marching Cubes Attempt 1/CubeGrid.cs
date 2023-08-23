@@ -6,6 +6,8 @@ using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
+
+// NEXT STEP: use chunking
 public class CubeGrid : MonoBehaviour
 {
     public float cellSize = 0.5f;
@@ -169,6 +171,187 @@ public class CubeGrid : MonoBehaviour
         
     }
 
+    void addPolyToMesh(List<Vector3> vertices, List<int> triangles, Cube cube, byte polyState, int vertStartI)
+    {
+        // we have 8 possible states
+        switch (polyState)
+        {
+            // trivial cases (0000 or 1111)
+            case 0:
+                break;
+            case 15:
+                break;
+
+            // 0001 or 1110
+            case 1:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
+                triangles.Add(vertices.Count - 1);
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 3);
+                break;
+            case 14:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 1);
+                break;
+
+            // 0010 or 1101
+            case 2:
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
+
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 1);
+                break;
+            case 13:
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
+
+                triangles.Add(vertices.Count - 1);
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 3);
+                break;
+
+            // 0011 or 1100
+            case 3:
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
+
+                triangles.Add(vertices.Count - 4);
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 2);
+
+                triangles.Add(vertices.Count - 1);
+                triangles.Add(vertices.Count - 4);
+                triangles.Add(vertices.Count - 2);
+                break;
+            case 12:
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
+
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 4);
+
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 4);
+                triangles.Add(vertices.Count - 1);
+                break;
+
+            // 0100 or 1011
+            case 4:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
+
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 1);
+                break;
+            case 11:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
+
+                triangles.Add(vertices.Count - 1);
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 3);
+                break;
+
+            // 0101 or 1010
+            case 5:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
+
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 4);
+
+                triangles.Add(vertices.Count - 1);
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 2);
+                break;
+            case 10:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
+
+                triangles.Add(vertices.Count - 4);
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 2);
+
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 1);
+                break;
+
+            // 0110 or 1001
+            case 6:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
+
+                triangles.Add(vertices.Count - 4);
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 2);
+
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 4);
+                triangles.Add(vertices.Count - 1);
+                break;
+            case 9:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
+
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 4);
+
+                triangles.Add(vertices.Count - 1);
+                triangles.Add(vertices.Count - 4);
+                triangles.Add(vertices.Count - 3);
+                break;
+
+            // 0111 or 1000
+            case 7:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
+
+                triangles.Add(vertices.Count - 1);
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 3);
+                break;
+            case 8:
+                vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
+                vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
+
+                triangles.Add(vertices.Count - 3);
+                triangles.Add(vertices.Count - 2);
+                triangles.Add(vertices.Count - 1);
+                break;
+        }
+    }
+
     // tested
     public Mesh createMesh()
     {
@@ -182,191 +365,12 @@ public class CubeGrid : MonoBehaviour
                 + Convert.ToByte(polys[i + 2]) * 4
                 + Convert.ToByte(polys[i + 3]) * 8
             );
-            int poly1 = polys[i];
-            int poly2 = polys[i + 1];
-            int poly3 = polys[i + 2];
-            int poly4 = polys[i + 3];
             Vector3Int cubeIndex = new Vector3Int(i / 24 / gridSize / gridSize, (i / 24 / gridSize) % gridSize, (i / 24) % gridSize);
 
             Cube cube = cubes[cubeIndex.x, cubeIndex.y, cubeIndex.z];
             int vertStartI = (i % 24);
-            // we have 8 possible states
-            switch (polyState)
-            {
-                // trivial cases (0000 or 1111)
-                case 0:
-                    break;
-                case 15:
-                    break;
 
-                // 0001 or 1110
-                case 1:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
-                    triangles.Add(vertices.Count - 1);
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 3);
-                    break;
-                case 14:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 1);
-                    break;
-
-                // 0010 or 1101
-                case 2:
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
-
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 1);
-                    break;
-                case 13:
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
-
-                    triangles.Add(vertices.Count - 1);
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 3);
-                    break;
-
-                // 0011 or 1100
-                case 3:
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
-
-                    triangles.Add(vertices.Count - 4);
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 2);
-
-                    triangles.Add(vertices.Count - 1);
-                    triangles.Add(vertices.Count - 4);
-                    triangles.Add(vertices.Count - 2);
-                    break;
-                case 12:
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
-
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 4);
-
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 4);
-                    triangles.Add(vertices.Count - 1);
-                    break;
-
-                // 0100 or 1011
-                case 4:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
-
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 1);
-                    break;
-                case 11:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
-
-                    triangles.Add(vertices.Count - 1);
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 3);
-                    break;
-
-                // 0101 or 1010
-                case 5:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
-
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 4);
-
-                    triangles.Add(vertices.Count - 1);
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 2);
-                    break;
-                case 10:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 2));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
-
-                    triangles.Add(vertices.Count - 4);
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 2);
-
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 1);
-                    break;
-
-                // 0110 or 1001
-                case 6:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
-
-                    triangles.Add(vertices.Count - 4);
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 2);
-
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 4);
-                    triangles.Add(vertices.Count - 1);
-                    break;
-                case 9:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 1));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 2));
-
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 4);
-
-                    triangles.Add(vertices.Count - 1);
-                    triangles.Add(vertices.Count - 4);
-                    triangles.Add(vertices.Count - 3);
-                    break;
-
-                // 0111 or 1000
-                case 7:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
-
-                    triangles.Add(vertices.Count - 1);
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 3);
-                    break;
-                case 8:
-                    vertices.Add(cube.polyVertexInterp(vertStartI, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 1, vertStartI + 3));
-                    vertices.Add(cube.polyVertexInterp(vertStartI + 2, vertStartI + 3));
-
-                    triangles.Add(vertices.Count - 3);
-                    triangles.Add(vertices.Count - 2);
-                    triangles.Add(vertices.Count - 1);
-                    break;
-            }
+            addPolyToMesh(vertices, triangles, cube, polyState, vertStartI);
         }
 
         Mesh mesh = new Mesh();

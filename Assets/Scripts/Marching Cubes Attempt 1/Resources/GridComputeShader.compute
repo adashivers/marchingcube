@@ -1,5 +1,5 @@
 #pragma kernel CSMain
-
+#include "noiseSimplex.cginc"
 
 RWStructuredBuffer<int> _PolyState;
 RWStructuredBuffer<int> POLY_TO_VERTEX;
@@ -10,7 +10,12 @@ float3 _GridOrigin;
 float _CellSize;
 
 int valueFunction(float3 pos) {
-    return pos.y < sin(pos.x) * 5; // test
+    float3 gridPos = (pos - _GridOrigin) / _CellSize;
+    float normalizedGridPos = length(gridPos) / (float(_GridSize) * 0.5);
+    float steepness = 5;
+    return snoise(gridPos * 0.05) > (pow(steepness, normalizedGridPos) - 1) / (steepness - 1);
+    
+    // return snoise(pos * 0.05) > length(pos - _GridOrigin) / (_CellSize * _GridSize / 2); // test
 }
 
 // workgroup id is (cube x, cube y, cube z)
