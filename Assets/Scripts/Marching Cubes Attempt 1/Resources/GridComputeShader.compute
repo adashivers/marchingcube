@@ -2,6 +2,7 @@
 #include "noiseSimplex.cginc"
 
 RWStructuredBuffer<int> _PolyState;
+RWStructuredBuffer<float3> _VertPos;
 RWStructuredBuffer<int> POLY_TO_VERTEX;
 
 int _GridSize;
@@ -75,6 +76,7 @@ void CSMain(
     int vertIndex = (groupid.x * _GridSize * _GridSize + groupid.y * _GridSize + groupid.z) * 6 * 4 + threadid.x * 4 + threadid.y;
     int value = valueFunction(vertexPosition);
     _PolyState[vertIndex] = value;
+    _VertPos[vertIndex] = vertexPosition;
 
 }
     
