@@ -7,15 +7,19 @@ using UnityEditor;
 using UnityEngine;
 
 
-// NEXT STEP: use chunking
+// NEXT STEP: add jobs
 public class CubeGrid : MonoBehaviour
 {
+    [Header("Sizes")]
     public float cellSize = 0.5f;
     public int gridSize = 5;
+    [Header("Output Mesh")]
     public GameObject meshOutput;
-    public bool debug = false;
+    // public bool debug = false;
+    [Header("Use GPU? (usually faster)")]
     public bool useGPU = true;
 
+    [Header("Other Settings")]
     public int seed = 3432534;
     public float noiseSize = 10;
 
@@ -23,12 +27,23 @@ public class CubeGrid : MonoBehaviour
     ComputeBuffer polyStateBuffer = null;
     ComputeBuffer polyToVertexBuffer = null;
     ComputeBuffer vertexPositionBuffer = null;
-    private Cube[, ,] cubes;
-    private int[] polys;
-    private Vector3[] vertexPositions;
+    private int[] polys; // each int is the state of one vertex. ordered in order cube x, y, z, and then 6 polyhedra * 4 vertex per poly
+    private Vector3[] vertexPositions; // each vector is the world position of one vertex. ordered the same way as polys
+    private Vector3[] axes; // local grid axes in world space
 
     void Awake()
     {
+        // set global values
+        polys = new int[gridSize * gridSize * gridSize * 6 * 4];
+        vertexPositions = new Vector3[gridSize * gridSize * gridSize * 6 * 4];
+        axes = new Vector3[]
+        {
+            transform.rotation * new Vector3(cellSize, 0, 0),
+            transform.rotation * new Vector3(0, cellSize, 0),
+            transform.rotation * new Vector3(0, 0, cellSize)
+        };
+        NoiseS3D.seed = seed;
+
         if (useGPU)
         {
             gridComputeShader = (ComputeShader)Resources.Load("GridComputeShader");
@@ -59,28 +74,25 @@ public class CubeGrid : MonoBehaviour
 
     void Start()
     {
-        polys = new int[gridSize * gridSize * gridSize * 6 * 4];
-        vertexPositions = new Vector3[gridSize * gridSize * gridSize * 6 * 4];
-        NoiseS3D.seed = seed;
         if (useGPU)
             LoadGPU();
         else
             LoadCPU();
-        Mesh mesh = (useGPU) ? createMeshGPU() : createMeshCPU();
+        Mesh mesh = createMesh();
         meshOutput.GetComponent<MeshFilter>().mesh = mesh;
         meshOutput.GetComponent<MeshRenderer>().material = new Material(Shader.Find("Standard"));
         meshOutput.GetComponent<MeshCollider>().sharedMesh = mesh;
     }
 
-    public bool isEmpty(Cube cube)
+    private bool isEmpty(byte polyState)
     {
-        return cube.polyhedra == 0 || cube.polyhedra == 16777215; // either completely inside or outside
+        return polyState == 0 || polyState == 15; // either completely inside or outside
     }
 
  
     private void OnDrawGizmos()
     {
-        
+        /* WIP
         if (debug)
         {
             for (int i = 0; i < gridSize; i++)
@@ -118,12 +130,11 @@ public class CubeGrid : MonoBehaviour
                 }
             
         }
-        
-        
+        */
     }
 
 
-    public bool isInSurface(Vector3 pos)
+    private bool isInSurface(Vector3 pos)
     {
         Vector3 v = pos * (1 / noiseSize);
         return NoiseS3D.Noise(v.x, v.y, v.z) > 0.5f;
@@ -131,12 +142,12 @@ public class CubeGrid : MonoBehaviour
         //return Mathf.Sin(pos.y) > 0.5;
     }
 
-    public void LoadGPU()
+    private void LoadGPU()
     {
         // set all values and buffers
         gridComputeShader.SetBuffer(0, "_PolyState", polyStateBuffer);
         gridComputeShader.SetBuffer(0, "_VertPos", vertexPositionBuffer);
-        polyToVertexBuffer.SetData(Cube.POLY_TO_VERTEX);
+        polyToVertexBuffer.SetData(MarchingCubeLookupTables.POLY_TO_CUBE_VERTEX);
         gridComputeShader.SetBuffer(0, "POLY_TO_VERTEX", polyToVertexBuffer);
         gridComputeShader.SetInt("_GridSize", gridSize);
         gridComputeShader.SetMatrix("_Rot", Matrix4x4.Rotate(transform.rotation));
@@ -151,7 +162,44 @@ public class CubeGrid : MonoBehaviour
         vertexPositionBuffer.GetData(vertexPositions);
     }
 
-    public Mesh createMeshGPU()
+    private Vector3 getVertexGlobalPos(Vector3 localPos, int indexInPoly)
+    {
+        Vector3 centerInWorld = transform.position + transform.rotation * (localPos * cellSize);
+
+        int vertexIndexInCube = MarchingCubeLookupTables.POLY_TO_CUBE_VERTEX[indexInPoly];
+        int[] offsetArray = MarchingCubeLookupTables.vertexPositionOffsets[vertexIndexInCube];
+        return centerInWorld + (
+            offsetArray[0] * axes[0] * 0.5f
+            + offsetArray[1] * axes[1] * 0.5f
+            + offsetArray[2] * axes[2] * 0.5f
+        );
+
+    }
+
+    private void LoadCPU()
+    {
+
+        for (int i = 0; i < gridSize; i++)
+        {
+            for (int j = 0; j < gridSize; j++)
+            {
+                for (int k = 0; k < gridSize; k++)
+                {
+                    int halfGridSize = gridSize / 2;
+                    Vector3 pos = new Vector3(i - halfGridSize, j - halfGridSize, k - halfGridSize);
+                    int vertIndex = (i * gridSize * gridSize + j * gridSize + k) * 6 * 4;
+
+                    for (int vertI = 0; vertI < 24; vertI++)
+                    {
+                        vertexPositions[vertIndex + vertI] = getVertexGlobalPos(pos, vertI);
+                        polys[vertIndex + vertI] = isInSurface(vertexPositions[vertIndex + vertI]) ? 1 : 0;
+                    }
+                }
+            }
+        }
+    }
+
+    private Mesh createMesh()
     {
         List<Vector3> vertices = new List<Vector3>();
         List<int> triangles = new List<int>();
@@ -168,6 +216,8 @@ public class CubeGrid : MonoBehaviour
             // get vertex index offsets from lookup table
             int pToVIndex = (polyState < 8) ? polyState : 15 - polyState;
             int[] pToVArray = MarchingCubeLookupTables.polyStateToVert[pToVIndex];
+
+            // enter new vertices
             for (int j = 0; j < pToVArray.Length; j += 2)
             {
                 vertices.Add(
@@ -180,91 +230,15 @@ public class CubeGrid : MonoBehaviour
 
             // get triangle index offsets from lookup table
             int[] pToTArray = MarchingCubeLookupTables.polyStateToTri[polyState];
+            
+            // enter new triangles
             for (int j = 0; j < pToTArray.Length; j++)
             {
                 triangles.Add(vertices.Count - pToTArray[j]);
             }
         }
 
-        Mesh mesh = new Mesh();
-        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; // more vertices
-        mesh.SetVertices(vertices);
-        mesh.SetTriangles(triangles, 0);
-        mesh.RecalculateNormals();
-        Debug.Log("Done in " + Time.realtimeSinceStartup);
-        return mesh;
-    }
-
-    public void LoadCPU()
-    {
-        cubes = new Cube[gridSize, gridSize, gridSize];
-
-        for (int i = 0; i < gridSize; i++)
-        {
-            for (int j = 0; j < gridSize; j++)
-            {
-                for (int k = 0; k < gridSize; k++)
-                {
-                    int halfGridSize = gridSize / 2;
-                    Vector3 pos = new Vector3(i - halfGridSize, j - halfGridSize, k - halfGridSize);
-                    cubes[i, j, k] = new Cube(pos);
-                    cubes[i, j, k].setVertexPos(transform.position, transform.rotation, cellSize);
-                    int vertIndex = (i * gridSize * gridSize + j * gridSize + k) * 6 * 4;
-                    cubes[i, j, k].setPolyValues(isInSurface);
-                    for (int vertI = 0; vertI < 24; vertI++)
-                    {
-                        // get only the desired polygon's state
-                        int vertState = (cubes[i, j, k].polyhedra >> vertI) & 1;
-                        polys[vertIndex + vertI] = vertState;
-                    }
-                }
-            }
-        }
-        
-    }
-
-
-
-
-    void addPolyToMeshCPU(List<Vector3> vertices, List<int> triangles, Cube cube, byte polyState, int vertStartI)
-    {
-        // get vertex index offsets from lookup table
-        int pToVIndex = (polyState < 8) ? polyState : 15 - polyState;
-        int[] pToVArray = MarchingCubeLookupTables.polyStateToVert[pToVIndex];
-        for (int i = 0; i < pToVArray.Length; i += 2)
-        {
-            vertices.Add(cube.polyVertexInterp(vertStartI + pToVArray[i], vertStartI + pToVArray[i + 1]));
-        }
-
-        // get triangle index offsets from lookup table
-        int[] pToTArray = MarchingCubeLookupTables.polyStateToTri[polyState];
-        for (int i = 0; i < pToTArray.Length; i++)
-        {
-            triangles.Add(vertices.Count - pToTArray[i]);
-        }
-    }
-
-    // tested
-    public Mesh createMeshCPU()
-    {
-        List<Vector3> vertices = new List<Vector3>();
-        List<int> triangles = new List<int>();
-        for (int i = 0; i < polys.Length; i = i + 4)
-        {
-            byte polyState = (byte)(
-                Convert.ToByte(polys[i])
-                + Convert.ToByte(polys[i + 1]) * 2
-                + Convert.ToByte(polys[i + 2]) * 4
-                + Convert.ToByte(polys[i + 3]) * 8
-            );
-            Vector3Int cubeIndex = new Vector3Int(i / 24 / gridSize / gridSize, (i / 24 / gridSize) % gridSize, (i / 24) % gridSize);
-
-            Cube cube = cubes[cubeIndex.x, cubeIndex.y, cubeIndex.z];
-            int vertStartI = (i % 24);
-
-            addPolyToMeshCPU(vertices, triangles, cube, polyState, vertStartI);
-        }
-
+        // bake mesh
         Mesh mesh = new Mesh();
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; // more vertices
         mesh.SetVertices(vertices);

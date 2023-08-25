@@ -4,7 +4,8 @@ using UnityEngine;
 
 public static class MarchingCubeLookupTables
 {
-    // maps poly indices to the indices of their vertices on the cube
+    // maps vertex indices of tetrahedron to their indices on the cube
+    // each pair of 4 indices is one tetrahedron
     public static int[] POLY_TO_CUBE_VERTEX = {
         5, 4, 1, 7,
         6, 5, 1, 7,
@@ -12,6 +13,19 @@ public static class MarchingCubeLookupTables
         2, 6, 1, 7,
         0, 3, 1, 7,
         3, 2, 1, 7
+    };
+
+    public static int[][] vertexPositionOffsets =
+        /// offsets in x, y, z to get from the center of a cube to the vertex at the index's position
+    {
+        new int[] { -1, -1, -1 }, // 0
+        new int[] { -1, -1, 1 }, // 1
+        new int[] { 1, -1, 1 }, // 2
+        new int[] { 1, -1, -1 }, // 3
+        new int[] { -1, 1, -1 }, // 4
+        new int[] { -1, 1, 1 }, // 5
+        new int[] { 1, 1, 1 }, // 6
+        new int[] { 1, 1, -1 }, // 7
     };
 
     public static int[][] polyStateToVert =
