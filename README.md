@@ -1,7 +1,5 @@
 # marchingcube
-marching cubes for unity using compute shaders.
-
-In hiatus for now, as I work on PAN.
+marching cubes for unity using three different workflows: single-thread, jobs, and compute shaders.
 
 done following the paper at the end of this webpage:
 https://paulbourke.net/geometry/polygonise/
